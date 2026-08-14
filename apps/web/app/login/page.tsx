@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { Fish } from '@phosphor-icons/react';
 import { API_URL } from '@/lib/api';
 
 export default function LoginPage() {
@@ -13,7 +14,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. Auto-Redirect jika sudah login (Cegah user login 2x)
   useEffect(() => {
     const token = Cookies.get('token');
     const userCookie = Cookies.get('user');
@@ -21,14 +21,13 @@ export default function LoginPage() {
     if (token && userCookie) {
       try {
         const user = JSON.parse(userCookie);
-        // Redirect sesuai role yang tersimpan
         if (user.role === 'ADMIN') {
-          router.replace('/admin/dashboard');
+          router.replace('/admin');
         } else {
-          router.replace('/user/dashboard');
+          router.replace('/user');
         }
       } catch (e) {
-        // Cookie rusak? Biarkan user login ulang.
+        // Cookie parse error fallback
       }
     }
   }, [router]);
@@ -39,8 +38,6 @@ export default function LoginPage() {
     setError('');
 
     try {
-      console.log('🚀 Mengirim request login...');
-
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,44 +45,18 @@ export default function LoginPage() {
       });
 
       const responseJson = await res.json();
-      console.log('🔍 RAW RESPONSE:', responseJson);
 
       if (!res.ok) {
-        throw new Error(
-          responseJson.message || 'Gagal login. Periksa email/password.'
-        );
+        throw new Error(responseJson.message || 'Gagal login. Periksa email/password.');
       }
 
-      // =========================================================
-      // 🛠️ LOGIKA EKSTRAKSI DATA (SMART PARSER)
-      // =========================================================
-
-      // Ambil root data (bisa di properti 'data' atau root response itu sendiri)
       const dataRoot = responseJson.data || responseJson;
+      let token = dataRoot.accessToken || dataRoot.token || responseJson.accessToken || responseJson.token;
+      let userData = dataRoot.user || (dataRoot.role ? dataRoot : null) || (responseJson.role ? responseJson : null);
 
-      // 1. CARI TOKEN
-      let token =
-        dataRoot.accessToken ||
-        dataRoot.token ||
-        responseJson.accessToken ||
-        responseJson.token;
-
-      // 2. CARI DATA USER
-      // Cek 1: Apakah ada properti 'user'? (Nested)
-      // Cek 2: Apakah 'dataRoot' punya 'role'? (Flattened)
-      // Cek 3: Apakah root response punya 'role'?
-      let userData =
-        dataRoot.user ||
-        (dataRoot.role ? dataRoot : null) ||
-        (responseJson.role ? responseJson : null);
-
-      // Validasi Akhir
       if (!token) throw new Error('Token tidak ditemukan di respons Backend!');
-      if (!userData)
-        throw new Error('Data User (Role) tidak ditemukan di respons Backend!');
+      if (!userData) throw new Error('Data User tidak ditemukan di respons Backend!');
 
-      // Bersihkan data user dari token (agar cookie user tidak terlalu besar)
-      // Kita buat object baru yang bersih
       const cleanUser = {
         id: userData.id,
         name: userData.name,
@@ -93,30 +64,17 @@ export default function LoginPage() {
         role: userData.role,
       };
 
-      // Bersihkan token dari tanda kutip string jika ada
       if (typeof token === 'string') token = token.replace(/"/g, '');
-
-      console.log('✅ Data Tervalidasi:');
-      console.log('Token:', token.substring(0, 10) + '...');
-      console.log('Role:', cleanUser.role);
-
-      // =========================================================
-      // 💾 SIMPAN COOKIE & REDIRECT
-      // =========================================================
 
       Cookies.set('token', token, { expires: 1, path: '/' });
       Cookies.set('user', JSON.stringify(cleanUser), { expires: 1, path: '/' });
 
-      // FORCE REDIRECT (Polisi Lalu Lintas) 👮‍♂️
       if (cleanUser.role === 'ADMIN') {
-        console.log('🔀 Redirecting to ADMIN Dashboard');
-        window.location.href = '/admin/dashboard';
+        window.location.href = '/admin';
       } else {
-        console.log('🔀 Redirecting to USER Dashboard');
-        window.location.href = '/user/dashboard';
+        window.location.href = '/user';
       }
     } catch (err: any) {
-      console.error('❌ Login Gagal:', err);
       setError(err.message);
       setIsLoading(false);
     }
@@ -124,32 +82,32 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-slate-100">
+      <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-100">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-orange-100 text-orange-600 mb-4 font-bold text-xl">
-            S
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-cyan-500 text-white mb-4 shadow-lg shadow-sky-600/30">
+            <Fish size={32} weight="fill" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Masuk Akun</h1>
-          <p className="text-slate-500 mt-2">
-            Kelola penyewaan alat camping kamu
+          <h1 className="text-2xl font-black text-slate-900">Masuk Akun PanenQu</h1>
+          <p className="text-slate-500 text-xs mt-1">
+            Belanja ikan segar langsung dari pembudidaya mitra
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6 text-center font-medium border border-red-100 animate-pulse">
+          <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs mb-6 text-center font-bold border border-red-100">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Email
             </label>
             <input
               type="email"
               required
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-600 outline-none transition"
               placeholder="nama@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -157,13 +115,13 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Password
             </label>
             <input
               type="password"
               required
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-600 outline-none transition"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -173,19 +131,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-slate-200"
+            className="w-full bg-gradient-to-r from-sky-600 to-cyan-600 text-white font-bold py-3.5 rounded-xl hover:from-sky-700 hover:to-cyan-700 transition disabled:opacity-50 shadow-lg shadow-sky-600/20 text-sm"
           >
             {isLoading ? 'Memproses...' : 'Masuk Sekarang'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-xs text-slate-500 mt-6">
           Belum punya akun?{' '}
-          <Link
-            href="/register"
-            className="text-orange-600 font-bold hover:underline"
-          >
-            Daftar User Baru
+          <Link href="/register" className="text-sky-600 font-bold hover:underline">
+            Daftar Pembeli Baru
           </Link>
         </p>
       </div>

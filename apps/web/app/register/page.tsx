@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Untuk pindah halaman
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Fish } from '@phosphor-icons/react';
 import { API_URL } from '@/lib/api';
 
 export default function RegisterPage() {
@@ -11,15 +12,13 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // State untuk feedback user
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(''); // Reset error
+    setError('');
 
     try {
       const res = await fetch(`${API_URL}/api/auth/register`, {
@@ -34,9 +33,8 @@ export default function RegisterPage() {
         throw new Error(data.message || 'Gagal mendaftar');
       }
 
-      // Jika Sukses:
-      alert('Registrasi Berhasil! Silakan Login.');
-      router.push('/login'); // Pindahkan ke halaman login
+      alert('✅ Registrasi Berhasil! Silakan Login.');
+      router.push('/login');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -45,18 +43,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 w-full max-w-md">
+    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-slate-900">Buat Akun Baru</h1>
-          <p className="text-slate-500 text-sm mt-2">
-            Gabung untuk petualangan seru
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-cyan-500 text-white mb-4 shadow-lg shadow-sky-600/30">
+            <Fish size={32} weight="fill" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900">Daftar Akun PanenQu</h1>
+          <p className="text-slate-500 text-xs mt-1">
+            Bergabunglah untuk membeli ikan segar & seafood berkualitas
           </p>
         </div>
 
-        {/* Tampilkan Error jika ada */}
         {error && (
-          <div className="bg-red-100 text-red-600 text-sm p-3 rounded-lg mb-4 text-center">
+          <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl mb-4 text-center font-bold border border-red-100">
             {error}
           </div>
         )}
@@ -69,8 +69,8 @@ export default function RegisterPage() {
             <input
               type="text"
               required
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
-              placeholder="John Doe"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
+              placeholder="Siti Rahma"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading}
@@ -84,7 +84,7 @@ export default function RegisterPage() {
             <input
               type="email"
               required
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
               placeholder="nama@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -99,7 +99,7 @@ export default function RegisterPage() {
             <input
               type="password"
               required
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-sky-600 outline-none"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -110,19 +110,16 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-orange-600 transition disabled:bg-slate-400"
+            className="w-full bg-gradient-to-r from-sky-600 to-cyan-600 text-white font-bold py-3.5 rounded-xl hover:from-sky-700 hover:to-cyan-700 transition disabled:opacity-50 shadow-lg shadow-sky-600/20 text-sm"
           >
             {isLoading ? 'Memproses...' : 'Daftar Akun'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
+        <p className="text-center text-xs text-slate-500 mt-6">
           Sudah punya akun?{' '}
-          <Link
-            href="/login"
-            className="text-orange-600 font-bold hover:underline"
-          >
-            Masuk
+          <Link href="/login" className="text-sky-600 font-bold hover:underline">
+            Masuk Sekarang
           </Link>
         </p>
       </div>

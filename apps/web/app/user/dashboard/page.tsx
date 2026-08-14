@@ -3,155 +3,214 @@
 import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Calendar, Package, Clock, CheckCircle } from '@phosphor-icons/react';
+import { Package, Clock, CheckCircle, Truck, XCircle, CreditCard, Fish } from '@phosphor-icons/react';
 import { API_URL } from '@/lib/api';
 
 export default function UserDashboard() {
   const router = useRouter();
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Ambil Data Booking User
   useEffect(() => {
     const token = Cookies.get('token');
     if (!token) return router.push('/login');
 
-    const fetchMyBookings = async () => {
+    const fetchMyOrders = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/bookings/my-bookings`, {
+        const res = await fetch(`${API_URL}/api/orders/my-orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = await res.json();
 
         if (res.ok) {
-          setBookings(json.data);
+          setOrders(json.data);
         }
       } catch (error) {
-        console.error('Gagal ambil data booking', error);
+        console.error('Gagal ambil pesanan', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchMyBookings();
+    fetchMyOrders();
   }, [router]);
 
-  const getStatusColor = (status: string) => {
+  const formatRupiah = (number: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(number);
+  };
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-700';
+        return (
+          <span className="bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <Clock size={14} weight="bold" /> Menunggu Pembayaran
+          </span>
+        );
       case 'PAID':
-        return 'bg-green-100 text-green-700';
+        return (
+          <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <CheckCircle size={14} weight="bold" /> Lunas / Terbayar
+          </span>
+        );
+      case 'PROCESSING':
+        return (
+          <span className="bg-sky-100 text-sky-800 border border-sky-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <Package size={14} weight="bold" /> Diproses & Dikemas Cold-Chain
+          </span>
+        );
+      case 'SHIPPED':
+        return (
+          <span className="bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <Truck size={14} weight="bold" /> Dalam Pengiriman Kurir
+          </span>
+        );
+      case 'DELIVERED':
+        return (
+          <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <CheckCircle size={14} weight="bold" /> Selesai / Diterima
+          </span>
+        );
       case 'CANCELLED':
-        return 'bg-red-100 text-red-700';
+        return (
+          <span className="bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <XCircle size={14} weight="bold" /> Dibatalkan
+          </span>
+        );
       default:
-        return 'bg-slate-100 text-slate-700';
+        return (
+          <span className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold">
+            {status}
+          </span>
+        );
+    }
+  };
+
+  const handlePaySnap = (order: any) => {
+    if (order.snapToken && typeof window !== 'undefined' && (window as any).snap) {
+      (window as any).snap.pay(order.snapToken, {
+        onSuccess: function () {
+          alert('✅ Pembayaran Berhasil!');
+          window.location.reload();
+        },
+        onPending: function () {
+          alert('⏳ Silakan selesaikan pembayaran!');
+        },
+        onError: function () {
+          alert('❌ Pembayaran Gagal!');
+        },
+      });
+    } else {
+      alert('Fitur pembayaran Midtrans Sandbox / Manual Transfer dapat diakses.');
     }
   };
 
   return (
     <main className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="container mx-auto max-w-4xl">
-        <div className="mb-8 flex justify-between items-end">
+        <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              Dashboard Saya 👋
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-2">
+              <Fish className="text-sky-600" size={32} weight="fill" />
+              <span>Pesanan Saya</span>
             </h1>
-            <p className="text-slate-500">
-              Riwayat penyewaan alat outdoor Anda
+            <p className="text-slate-500 text-xs md:text-sm mt-1">
+              Riwayat belanja ikan segar dan seafood di PanenQu
             </p>
           </div>
-          <button
-            onClick={() => {
-              Cookies.remove('token');
-              router.push('/login');
-            }}
-            className="text-red-500 text-sm font-bold hover:underline"
-          >
-            Logout
-          </button>
         </div>
 
         <div className="space-y-6">
           {isLoading ? (
-            <p className="text-center py-10">Memuat data...</p>
-          ) : bookings.length === 0 ? (
-            <div className="bg-white p-10 rounded-2xl text-center border border-slate-200">
-              <Package size={48} className="mx-auto text-slate-300 mb-2" />
-              <p className="text-slate-500 font-medium">Belum ada penyewaan.</p>
-              <p className="text-slate-400 text-sm mb-4">
-                Yuk sewa alat outdoor pertamamu!
-              </p>
+            <div className="text-center py-12 text-slate-400">Memuat riwayat pesanan...</div>
+          ) : orders.length === 0 ? (
+            <div className="bg-white p-12 rounded-3xl text-center border border-slate-100 shadow-sm">
+              <Package size={48} className="mx-auto text-slate-300 mb-3" />
+              <p className="text-slate-800 font-bold text-base mb-1">Belum Ada Pesanan</p>
+              <p className="text-slate-500 text-xs mb-6">Yuk belanja ikan segar favoritmu sekarang!</p>
+              <button
+                onClick={() => router.push('/')}
+                className="bg-sky-600 text-white px-6 py-3 rounded-2xl font-bold text-xs shadow-md"
+              >
+                Mulai Belanja Ikan
+              </button>
             </div>
           ) : (
-            bookings.map((booking) => (
+            orders.map((order) => (
               <div
-                key={booking.id}
-                className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition"
+                key={order.id}
+                className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition"
               >
-                {/* Header Kartu */}
-                <div className="flex justify-between items-start mb-4 border-b pb-4 border-slate-100">
+                {/* Header Order */}
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-4 pb-4 border-b border-slate-100">
                   <div>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">
-                      Order ID: #{booking.id}
-                    </p>
-                    <div
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(
-                        booking.status
-                      )}`}
-                    >
-                      {booking.status === 'PENDING' && <Clock weight="bold" />}
-                      {booking.status === 'PAID' && (
-                        <CheckCircle weight="bold" />
-                      )}
-                      {booking.status}
-                    </div>
+                    <span className="text-[10px] text-slate-400 font-extrabold tracking-wider uppercase block">
+                      Order #{order.id.slice(0, 8)}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      {new Date(order.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-slate-500">Total Tagihan</p>
-                    <p className="text-xl font-bold text-slate-900">
-                      Rp {booking.totalPrice.toLocaleString('id-ID')}
-                    </p>
-                  </div>
+                  <div>{getStatusBadge(order.status)}</div>
                 </div>
 
-                {/* List Barang */}
-                <div className="space-y-4">
-                  {booking.items.map((item: any) => (
-                    <div key={item.id} className="flex gap-4 items-center">
-                      <div className="relative w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0">
-                        {item.gear.imageUrl && (
-                          <Image
-                            src={`${item.gear.imageUrl}`}
-                            alt={item.gear.name}
-                            fill
-                            className="object-cover"
-                            unoptimized //
+                {/* Items */}
+                <div className="space-y-3 mb-4">
+                  {order.items.map((item: any) => (
+                    <div key={item.id} className="flex items-center gap-3">
+                      <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden shrink-0">
+                        {item.product?.imageUrl ? (
+                          <img
+                            src={item.product.imageUrl}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover"
                           />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-300">
+                            <Fish size={24} />
+                          </div>
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-800">
-                          {item.gear.name}
+                      <div className="flex-1">
+                        <h4 className="font-bold text-slate-900 text-sm line-clamp-1">
+                          {item.product?.name || 'Produk Ikan'}
                         </h4>
-                        <p className="text-sm text-slate-500">
-                          {item.quantity} unit x Rp{' '}
-                          {item.price.toLocaleString('id-ID')}
+                        <p className="text-xs text-slate-500">
+                          {item.quantity} x {formatRupiah(item.price)}
                         </p>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Footer Kartu */}
-                <div className="mt-4 pt-4 border-t border-slate-100 flex gap-4 text-sm text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="text-orange-500" weight="fill" />
-                    {new Date(booking.startDate).toLocaleDateString(
-                      'id-ID'
-                    )} - {new Date(booking.endDate).toLocaleDateString('id-ID')}
+                {/* Footer Order */}
+                <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold block">Total Pembayaran</span>
+                    <span className="text-lg font-black text-sky-600">
+                      {formatRupiah(order.totalPrice)}
+                    </span>
                   </div>
+
+                  {order.status === 'PENDING' && (
+                    <button
+                      onClick={() => handlePaySnap(order)}
+                      className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 hover:from-orange-600 hover:to-amber-600 transition"
+                    >
+                      <CreditCard size={16} weight="bold" />
+                      <span>Bayar Sekarang</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))

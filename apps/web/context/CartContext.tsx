@@ -8,23 +8,28 @@ import {
   ReactNode,
 } from 'react';
 
-// Tipe data item di keranjang
-type CartItem = {
-  id: number;
+export type CartItem = {
+  id: string;
   name: string;
-  pricePerDay: number;
+  price: number;
   imageUrl: string;
   quantity: number;
-  stock: number; // Agar kita bisa batasi max qty
+  stock: number;
+  unit: string;
+  weightGram?: number;
+  isFresh?: boolean;
+  isFrozen?: boolean;
+  isProcessed?: boolean;
 };
 
 type CartContextType = {
   items: CartItem[];
   addToCart: (product: any) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, delta: number) => void;
+  removeFromCart: (id: string) => void;
+  updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
   cartCount: number;
+  cartTotal: number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -32,64 +37,74 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // 1. Load dari LocalStorage saat awal buka
+  // 1. Load dari LocalStorage saat awal render
   useEffect(() => {
-    const savedCart = localStorage.getItem('sewatenda_cart');
-    if (savedCart) {
-      setItems(JSON.parse(savedCart));
+    try {
+      const savedCart = localStorage.getItem('panenqu_cart');
+      if (savedCart) {
+        setItems(JSON.parse(savedCart));
+      }
+    } catch (e) {
+      console.error('Error reading cart from localStorage', e);
     }
   }, []);
 
-  // 2. Simpan ke LocalStorage setiap ada perubahan
+  // 2. Simpan ke LocalStorage saat items berubah
   useEffect(() => {
-    localStorage.setItem('sewatenda_cart', JSON.stringify(items));
+    try {
+      localStorage.setItem('panenqu_cart', JSON.stringify(items));
+    } catch (e) {
+      console.error('Error saving cart to localStorage', e);
+    }
   }, [items]);
 
-  // Tambah Barang
+  // Tambah Produk ke Keranjang
   const addToCart = (product: any) => {
     setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const productId = String(product.id);
+      const existing = prev.find((item) => item.id === productId);
+
       if (existing) {
-        // Kalau sudah ada, tambah qty (tapi jangan melebihi stok)
         if (existing.quantity < product.stock) {
           return prev.map((item) =>
-            item.id === product.id
+            item.id === productId
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
         }
-        alert('Stok barang di keranjang sudah maksimal!');
         return prev;
       }
-      // Kalau belum ada, masukkan baru
+
       return [
         ...prev,
         {
-          id: product.id,
+          id: productId,
           name: product.name,
-          pricePerDay: product.pricePerDay,
-          imageUrl: product.imageUrl,
+          price: Number(product.price),
+          imageUrl: product.imageUrl || '',
           quantity: 1,
-          stock: product.stock,
+          stock: Number(product.stock || 99),
+          unit: product.unit || 'kg',
+          weightGram: product.weightGram,
+          isFresh: product.isFresh,
+          isFrozen: product.isFrozen,
+          isProcessed: product.isProcessed,
         },
       ];
     });
-    alert('Barang masuk keranjang! 🛒');
   };
 
-  // Hapus Barang
-  const removeFromCart = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+  const removeFromCart = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== String(id)));
   };
 
-  // Update Quantity (+/-)
-  const updateQuantity = (id: number, delta: number) => {
+  const updateQuantity = (id: string, delta: number) => {
     setItems((prev) =>
       prev.map((item) => {
-        if (item.id === id) {
+        if (item.id === String(id)) {
           const newQty = item.quantity + delta;
-          if (newQty > item.stock) return item; // Mentok stok
-          if (newQty < 1) return item; // Minimal 1
+          if (newQty > item.stock) return item;
+          if (newQty < 1) return item;
           return { ...item, quantity: newQty };
         }
         return item;
@@ -99,8 +114,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => setItems([]);
 
-  // Total item unik (atau total quantity jika mau)
-  const cartCount = items.length;
+  const cartCount = items.reduce((acc, item) => acc + item.quantity, 0);
+  const cartTotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   return (
     <CartContext.Provider
@@ -111,6 +126,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         clearCart,
         cartCount,
+        cartTotal,
       }}
     >
       {children}

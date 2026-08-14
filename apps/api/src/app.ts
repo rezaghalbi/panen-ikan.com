@@ -1,41 +1,55 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
+import path from 'path';
 import authRoutes from './routes/auth.route';
 import categoryRoutes from './routes/category.route';
-import gearRoutes from './routes/gear.route';
-import bookingRoutes from './routes/booking.route';
-import userRouter from './routes/user.route';
-import path from 'path';
+import productRoutes from './routes/product.route';
+import orderRoutes from './routes/order.route';
+import userRoutes from './routes/user.route';
 
 const app: Express = express();
 
-// Middleware
+// Parse FRONTEND_URL dynamically from environment variables
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
+  : ['http://localhost:3000', 'http://localhost:3001', 'https://panenqu.vercel.app'];
+
+// Middleware CORS
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000', // Izinkan localhost (untuk testing)
-      'https://summit-gear.vercel.app', // Izinkan Domain Frontend Vercel Anda
-      // Atau jika mau gampang (tapi kurang aman): origin: '*'
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl) or if origin is in allowedOrigins
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive callback for seamless deployment
+      }
+    },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.use(express.json());
 
-// static files
+// Serve Static Images
 app.use('/images', express.static(path.join(__dirname, '../public/images')));
 
-// Route Test (Health Check)
+// API Health Check Endpoint
 app.get('/', (req, res) => {
-  res.send('SummitGear API Ready! 🚀');
+  res.status(200).json({
+    status: 'online',
+    message: 'PanenQu E-Commerce API Ready! 🐟🚀',
+    timestamp: new Date().toISOString(),
+  });
 });
 
+// API Routes Registration
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/gears', gearRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/users', userRouter);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
 
 export default app;

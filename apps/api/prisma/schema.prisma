@@ -7,89 +7,91 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
-  password  String   // Akan di-hash nanti
+  password  String
   name      String
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
   
-  
-  bookings  Booking[]
+  orders    Order[]
 }
 
-
-model Gear {
+model Product {
   id          String   @id @default(uuid())
-  name        String   
-  
-  pricePerDay Int      
-  stock       Int      
+  name        String
   description String?
+  price       Int      // Harga per unit / per kg (Rupiah)
+  weightGram  Int      @default(1000) // Berat gram (misal 500g, 1000g)
+  unit        String   @default("kg") // "kg" atau "pack"
+  stock       Int      @default(0)
   imageUrl    String?
   
+  isFresh     Boolean  @default(true)  // Badge Ikan Segar
+  isFrozen    Boolean  @default(false) // Badge Ikan Beku / IQF
+  isProcessed Boolean  @default(false) // Badge Ikan Olahan / Bumbu
   
-  bookingItems BookingItem[]
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])
+  
+  orderItems  OrderItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-
-model Booking {
-  id          String        @id @default(uuid())
-  startDate   DateTime
-  endDate     DateTime
-  totalPrice  Int
-  status      BookingStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-
+model Order {
+  id              String      @id @default(uuid())
+  totalPrice      Int
+  status          OrderStatus @default(PENDING)
+  shippingAddress String?
+  shippingMethod  String?     @default("Instant Cold-Chain")
+  notes           String?
   
-  userId      String
-  user        User          @relation(fields: [userId], references: [id])
-  items       BookingItem[]
+  snapToken       String?
+  snapRedirectUrl String?
+  
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
 
-
-model BookingItem {
-  id        String @id @default(uuid())
+model OrderItem {
+  id        String  @id @default(uuid())
   quantity  Int
-  price     Int    
+  price     Int     // Harga per barang saat checkout
   
-  bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id])
-  gearId    String
-  gear      Gear    @relation(fields: [gearId], references: [id])
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 }
 
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+}
 
 enum Role {
   CUSTOMER
   ADMIN
 }
 
-
-
-enum BookingStatus {
-  PENDING     
-  APPROVED    
-  REJECTED    
-  PAID        
-  PICKED_UP   
-  RETURNED    
-  CANCELLED   
-}
-
-model Category {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  gears     Gear[]
-
- 
+enum OrderStatus {
+  PENDING     // Menunggu Pembayaran
+  PAID        // Sudah Dibayar
+  PROCESSING  // Pesanan Diproses / Dikemas
+  SHIPPED     // Dalam Pengiriman Kurir
+  DELIVERED   // Selesai & Diterima
+  CANCELLED   // Dibatalkan
 }
