@@ -9,5 +9,12 @@ declare module 'midtrans-client' {
       token: string;
       redirect_url: string;
     }>;
+    transaction: {
+      notification(orderId: string): Promise<any>;
+      status(orderId: string): Promise<any>;
+      approve(orderId: string): Promise<any>;
+      cancel(orderId: string): Promise<any>;
+      expire(orderId: string): Promise<any>;
+    };
   }
 }
