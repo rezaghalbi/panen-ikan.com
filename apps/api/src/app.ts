@@ -6,6 +6,7 @@ import categoryRoutes from './routes/category.route';
 import productRoutes from './routes/product.route';
 import orderRoutes from './routes/order.route';
 import userRoutes from './routes/user.route';
+import { handleMidtransNotification } from './controllers/order.controller';
 
 const app: Express = express();
 
@@ -44,6 +45,10 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Alias Midtrans Webhook Notification Endpoints (to support custom / legacy endpoints)
+app.post('/api/transactions/notification', handleMidtransNotification);
+app.post('/api/notification', handleMidtransNotification);
 
 // API Routes Registration
 app.use('/api/auth', authRoutes);
