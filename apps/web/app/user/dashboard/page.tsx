@@ -13,7 +13,7 @@ import {
   Fish,
   Printer,
   X,
-  ArrowsCounterclockwise,
+  ArrowsCounterClockwise,
 } from '@phosphor-icons/react';
 import { API_URL } from '@/lib/api';
 
@@ -149,7 +149,7 @@ export default function UserDashboard() {
             disabled={isRefreshing}
             className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-xl border border-slate-200 text-xs transition shadow-sm"
           >
-            <ArrowsCounterclockwise size={16} className={isRefreshing ? 'animate-spin' : ''} />
+            <ArrowsCounterClockwise size={16} className={isRefreshing ? 'animate-spin' : ''} />
             <span>{isRefreshing ? 'Memperbarui...' : 'Refresh Status'}</span>
           </button>
         </div>
