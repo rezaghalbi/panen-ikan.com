@@ -1,7 +1,6 @@
 import multer from 'multer';
-import path from 'path';
 
-// Konfigurasi Lokasi & Nama File
+// Konfigurasi Lokasi & Nama File (Memory storage untuk upload Supabase)
 const storage = multer.memoryStorage();
 
 // Filter: Hanya boleh upload gambar
@@ -16,5 +15,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
 export const uploader = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 }, // Maksimal 2MB
+  limits: { fileSize: 5 * 1024 * 1024 }, // Maksimal 5MB
 });
+
+export default uploader;
