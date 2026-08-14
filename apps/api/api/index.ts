@@ -1,4 +1,3 @@
-// apps/api/api/index.ts
-import app from '../src/index'; // Import app Express utama Anda
+import app from '../src/app';
 
 export default app;
