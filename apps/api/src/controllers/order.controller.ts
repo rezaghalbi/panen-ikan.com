@@ -1,8 +1,45 @@
 import { Request, Response } from 'express';
 import { PrismaClient, OrderStatus } from '@prisma/client';
-import { createMidtransTransaction } from '../config/midtrans';
+import { createMidtransTransaction, snap } from '../config/midtrans';
 
 const prisma = new PrismaClient();
+
+// Helper untuk menyinkronkan status pesanan dengan Midtrans API
+const syncOrderPaymentWithMidtrans = async (orderId: string): Promise<OrderStatus> => {
+  try {
+    const statusResponse = await (snap.transaction as any).notification(orderId);
+    const transactionStatus = statusResponse?.transaction_status;
+    const fraudStatus = statusResponse?.fraud_status;
+
+    console.log(`🔍 Midtrans Live Check for ${orderId}: ${transactionStatus}`);
+
+    let updatedStatus: OrderStatus = OrderStatus.PENDING;
+
+    if (transactionStatus === 'capture' || transactionStatus === 'settlement') {
+      if (fraudStatus === 'accept' || !fraudStatus) {
+        updatedStatus = OrderStatus.PAID;
+      }
+    } else if (
+      transactionStatus === 'cancel' ||
+      transactionStatus === 'deny' ||
+      transactionStatus === 'expire'
+    ) {
+      updatedStatus = OrderStatus.CANCELLED;
+    }
+
+    if (updatedStatus !== OrderStatus.PENDING) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: updatedStatus },
+      });
+    }
+
+    return updatedStatus;
+  } catch (err) {
+    // Return pending if transaction not found yet or error
+    return OrderStatus.PENDING;
+  }
+};
 
 export const createOrder = async (req: Request, res: Response) => {
   try {
@@ -113,7 +150,7 @@ export const createOrder = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Create order error:', error);
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    res.status(500).json({ message: error.message || 'Internal Server Error' });
   }
 };
 
@@ -131,9 +168,19 @@ export const getMyOrders = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Auto-sync status untuk order yang masih PENDING
+    for (const order of orders) {
+      if (order.status === OrderStatus.PENDING) {
+        const latestStatus = await syncOrderPaymentWithMidtrans(order.id);
+        if (latestStatus !== OrderStatus.PENDING) {
+          order.status = latestStatus;
+        }
+      }
+    }
+
     res.status(200).json({ data: orders });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal Server Error' });
   }
 };
 
@@ -151,9 +198,19 @@ export const getAllOrders = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Auto-sync status PENDING untuk admin dashboard
+    for (const order of orders) {
+      if (order.status === OrderStatus.PENDING) {
+        const latestStatus = await syncOrderPaymentWithMidtrans(order.id);
+        if (latestStatus !== OrderStatus.PENDING) {
+          order.status = latestStatus;
+        }
+      }
+    }
+
     res.status(200).json({ data: orders });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal Server Error' });
   }
 };
 
@@ -161,7 +218,7 @@ export const getOrderById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const order = await prisma.order.findUnique({
+    let order = await prisma.order.findUnique({
       where: { id },
       include: {
         user: {
@@ -177,9 +234,36 @@ export const getOrderById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    if (order.status === OrderStatus.PENDING) {
+      const latestStatus = await syncOrderPaymentWithMidtrans(order.id);
+      if (latestStatus !== OrderStatus.PENDING) {
+        order.status = latestStatus;
+      }
+    }
+
     res.status(200).json({ data: order });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal Server Error' });
+  }
+};
+
+export const syncPaymentStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updatedStatus = await syncOrderPaymentWithMidtrans(id);
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: { include: { product: true } },
+      },
+    });
+
+    res.status(200).json({
+      message: `Status order ${id} disinkronkan ke ${updatedStatus}`,
+      data: updatedOrder,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Gagal sinkronkan pembayaran' });
   }
 };
 
@@ -197,15 +281,15 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       message: `Order status updated to ${status}`,
       data: updatedOrder,
     });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Internal Server Error' });
   }
 };
 
 export const handleMidtransNotification = async (req: Request, res: Response) => {
   try {
     const statusResponse = req.body;
-    const orderId = statusResponse.order_id;
+    const orderId = statusResponse.order_id || statusResponse.orderId;
     const transactionStatus = statusResponse.transaction_status;
     const fraudStatus = statusResponse.fraud_status;
 
@@ -223,20 +307,18 @@ export const handleMidtransNotification = async (req: Request, res: Response) =>
       transactionStatus === 'expire'
     ) {
       newStatus = OrderStatus.CANCELLED;
-    } else if (transactionStatus === 'pending') {
-      newStatus = OrderStatus.PENDING;
     }
 
-    if (orderId) {
+    if (orderId && newStatus !== OrderStatus.PENDING) {
       await prisma.order.update({
         where: { id: orderId },
         data: { status: newStatus },
       });
     }
 
-    res.status(200).json({ message: 'Notification processed' });
-  } catch (error) {
+    res.status(200).json({ message: 'Notification processed', status: newStatus });
+  } catch (error: any) {
     console.error('Midtrans Notification Error:', error);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: error.message || 'Internal Server Error' });
   }
 };

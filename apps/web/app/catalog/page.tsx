@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, MagnifyingGlass, Fish, Snowflake, Flame, Plus } from '@phosphor-icons/react';
+import { ShoppingCart, MagnifyingGlass, Fish, Snowflake, Flame, Plus, Eye } from '@phosphor-icons/react';
 import { useCart } from '../../context/CartContext';
 import { API_URL } from '@/lib/api';
 
@@ -46,7 +46,7 @@ export default function CatalogPage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-50 py-10 px-4">
+    <main className="min-h-screen bg-slate-50 py-10 px-4 font-sans">
       <div className="container mx-auto max-w-6xl">
         {/* HEADER & SEARCH BAR */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -144,7 +144,7 @@ export default function CatalogPage() {
                 key={product.id}
                 className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition group overflow-hidden flex flex-col"
               >
-                <div className="relative h-48 w-full bg-slate-100">
+                <Link href={`/catalog/${product.id}`} className="relative h-48 w-full bg-slate-100 block">
                   {product.imageUrl ? (
                     <img
                       src={product.imageUrl}
@@ -169,16 +169,19 @@ export default function CatalogPage() {
                       </span>
                     )}
                   </div>
-                </div>
+                </Link>
 
                 <div className="p-4 flex flex-col flex-1 justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider block">
                       {product.category?.name || 'Hasil Panen'}
                     </span>
-                    <h3 className="font-bold text-slate-900 text-sm line-clamp-2 mt-0.5">
+                    <Link
+                      href={`/catalog/${product.id}`}
+                      className="font-bold text-slate-900 text-sm line-clamp-2 mt-0.5 hover:text-sky-600 transition"
+                    >
                       {product.name}
-                    </h3>
+                    </Link>
                   </div>
 
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
@@ -191,13 +194,22 @@ export default function CatalogPage() {
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="bg-sky-600 text-white p-2.5 rounded-xl hover:bg-sky-700 transition shadow-md shadow-sky-600/20 active:scale-95"
-                      title="Tambah ke Keranjang"
-                    >
-                      <Plus size={18} weight="bold" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/catalog/${product.id}`}
+                        className="bg-slate-100 text-slate-600 p-2.5 rounded-xl hover:bg-slate-200 transition"
+                        title="Lihat Detail"
+                      >
+                        <Eye size={18} />
+                      </Link>
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="bg-sky-600 text-white p-2.5 rounded-xl hover:bg-sky-700 transition shadow-md shadow-sky-600/20 active:scale-95"
+                        title="Tambah ke Keranjang"
+                      >
+                        <Plus size={18} weight="bold" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

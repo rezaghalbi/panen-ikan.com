@@ -3,35 +3,51 @@
 import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
-import { Package, Clock, CheckCircle, Truck, XCircle, CreditCard, Fish } from '@phosphor-icons/react';
+import {
+  Package,
+  Clock,
+  CheckCircle,
+  Truck,
+  XCircle,
+  CreditCard,
+  Fish,
+  Printer,
+  X,
+  ArrowsCounterclockwise,
+} from '@phosphor-icons/react';
 import { API_URL } from '@/lib/api';
 
 export default function UserDashboard() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
 
-  useEffect(() => {
+  const fetchMyOrders = async (showRefreshState = false) => {
     const token = Cookies.get('token');
     if (!token) return router.push('/login');
 
-    const fetchMyOrders = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/orders/my-orders`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
+    if (showRefreshState) setIsRefreshing(true);
 
-        if (res.ok) {
-          setOrders(json.data);
-        }
-      } catch (error) {
-        console.error('Gagal ambil pesanan', error);
-      } finally {
-        setIsLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/api/orders/my-orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+
+      if (res.ok && json.data) {
+        setOrders(json.data);
       }
-    };
+    } catch (error) {
+      console.error('Gagal ambil pesanan', error);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
+  useEffect(() => {
     fetchMyOrders();
   }, [router]);
 
@@ -54,7 +70,7 @@ export default function UserDashboard() {
       case 'PAID':
         return (
           <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-            <CheckCircle size={14} weight="bold" /> Lunas / Terbayar
+            <CheckCircle size={14} weight="bold" /> Terbayar / Siap Dikemas
           </span>
         );
       case 'PROCESSING':
@@ -95,22 +111,27 @@ export default function UserDashboard() {
       (window as any).snap.pay(order.snapToken, {
         onSuccess: function () {
           alert('✅ Pembayaran Berhasil!');
-          window.location.reload();
+          fetchMyOrders(true);
         },
         onPending: function () {
           alert('⏳ Silakan selesaikan pembayaran!');
+          fetchMyOrders(true);
         },
         onError: function () {
           alert('❌ Pembayaran Gagal!');
         },
       });
     } else {
-      alert('Fitur pembayaran Midtrans Sandbox / Manual Transfer dapat diakses.');
+      alert('Fitur pembayaran Midtrans Snap aktif.');
     }
   };
 
+  const handlePrintReceipt = (order: any) => {
+    setActiveReceipt(order);
+  };
+
   return (
-    <main className="min-h-screen bg-slate-50 py-10 px-4">
+    <main className="min-h-screen bg-slate-50 py-10 px-4 font-sans">
       <div className="container mx-auto max-w-4xl">
         <div className="mb-8 flex justify-between items-center">
           <div>
@@ -122,6 +143,15 @@ export default function UserDashboard() {
               Riwayat belanja ikan segar dan seafood di PanenQu
             </p>
           </div>
+
+          <button
+            onClick={() => fetchMyOrders(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold px-4 py-2 rounded-xl border border-slate-200 text-xs transition shadow-sm"
+          >
+            <ArrowsCounterclockwise size={16} className={isRefreshing ? 'animate-spin' : ''} />
+            <span>{isRefreshing ? 'Memperbarui...' : 'Refresh Status'}</span>
+          </button>
         </div>
 
         <div className="space-y-6">
@@ -168,7 +198,7 @@ export default function UserDashboard() {
                 <div className="space-y-3 mb-4">
                   {order.items.map((item: any) => (
                     <div key={item.id} className="flex items-center gap-3">
-                      <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden shrink-0">
+                      <div className="w-14 h-14 bg-slate-100 rounded-xl overflow-hidden shrink-0 border border-slate-200">
                         {item.product?.imageUrl ? (
                           <img
                             src={item.product.imageUrl}
@@ -202,21 +232,105 @@ export default function UserDashboard() {
                     </span>
                   </div>
 
-                  {order.status === 'PENDING' && (
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handlePaySnap(order)}
-                      className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 hover:from-orange-600 hover:to-amber-600 transition"
+                      onClick={() => handlePrintReceipt(order)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition border border-slate-200"
                     >
-                      <CreditCard size={16} weight="bold" />
-                      <span>Bayar Sekarang</span>
+                      <Printer size={16} />
+                      <span>Cetak Struk</span>
                     </button>
-                  )}
+
+                    {order.status === 'PENDING' && (
+                      <button
+                        onClick={() => handlePaySnap(order)}
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 hover:from-orange-600 hover:to-amber-600 transition"
+                      >
+                        <CreditCard size={16} weight="bold" />
+                        <span>Bayar Sekarang</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* MODAL PRINT RECEIPT */}
+      {activeReceipt && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl relative border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setActiveReceipt(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={20} />
+            </button>
+
+            {/* RECEIPT CONTENT */}
+            <div id="printable-receipt" className="space-y-4 font-sans text-slate-800">
+              <div className="text-center pb-4 border-b border-dashed border-slate-300">
+                <div className="inline-flex items-center gap-1 font-black text-xl text-sky-700">
+                  <Fish size={24} weight="fill" />
+                  <span>Panen<span className="text-orange-600">Qu</span></span>
+                </div>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+                  Struk Pembelian Ikan Segar
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  ID: #{activeReceipt.id}
+                </p>
+              </div>
+
+              <div className="text-xs space-y-1 text-slate-600">
+                <p><span className="font-bold text-slate-900">Tanggal:</span> {new Date(activeReceipt.createdAt).toLocaleDateString('id-ID', { dateStyle: 'full' })}</p>
+                <p><span className="font-bold text-slate-900">Status:</span> {activeReceipt.status}</p>
+                <p><span className="font-bold text-slate-900">Alamat:</span> {activeReceipt.shippingAddress}</p>
+              </div>
+
+              <div className="border-t border-b border-dashed border-slate-300 py-3 space-y-2 text-xs">
+                {activeReceipt.items?.map((item: any) => (
+                  <div key={item.id} className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-slate-900">{item.product?.name}</p>
+                      <p className="text-[10px] text-slate-500">{item.quantity} x {formatRupiah(item.price)}</p>
+                    </div>
+                    <span className="font-extrabold text-slate-800">{formatRupiah(item.price * item.quantity)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <span className="font-black text-sm text-slate-900">Total Pembayaran</span>
+                <span className="font-black text-base text-sky-600">{formatRupiah(activeReceipt.totalPrice)}</span>
+              </div>
+
+              <div className="text-center pt-4 text-[10px] text-slate-400">
+                <p>Terima kasih telah berbelanja di PanenQu!</p>
+                <p>Jaminan 100% Ikan Segar & Cold-Chain Delivery</p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => setActiveReceipt(null)}
+                className="w-1/2 border border-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs"
+              >
+                Tutup
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="w-1/2 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md flex items-center justify-center gap-1.5"
+              >
+                <Printer size={16} />
+                <span>Cetak (PDF)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

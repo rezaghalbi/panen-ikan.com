@@ -3,13 +3,13 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { CartProvider } from '../context/CartContext';
-import Navbar from '../components/Navbar';
+import FloatingWhatsApp from '../components/FloatingWhatsApp';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'PanenQu - Marketplace Ikan Segar & Frozen Quality',
-  description: 'Platform jual beli ikan segar budidaya, fillet frozen IQF, dan olahan bumbu kualitas terbaik langsung dari petani mitra.',
+  title: 'PanenQu - Marketplace Ikan Segar & Seafood Quality',
+  description: 'Platform jual beli ikan segar budidaya, fillet frozen IQF, dan olahan bumbu kualitas terbaik langsung dari petambak mitra.',
 };
 
 export default function RootLayout({
@@ -34,8 +34,8 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <CartProvider>
-          <Navbar />
           {children}
+          <FloatingWhatsApp />
         </CartProvider>
       </body>
     </html>
