@@ -80,21 +80,14 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        imageUrl: product.imageUrl || 'https://images.unsplash.com/photo-1534483509719-3feaee7c30da?auto=format&fit=crop&w=800&q=80',
-        unit: product.unit || 'kg',
-      });
-    }
+    addToCart(product, quantity);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2500);
   };
 
   const handleBuyNow = () => {
-    handleAddToCart();
+    if (!product) return;
+    addToCart(product, quantity);
     router.push('/cart');
   };
 

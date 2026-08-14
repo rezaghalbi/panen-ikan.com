@@ -7,11 +7,26 @@ const prisma = new PrismaClient();
 // Helper untuk menyinkronkan status pesanan dengan Midtrans API
 const syncOrderPaymentWithMidtrans = async (orderId: string): Promise<OrderStatus> => {
   try {
-    const statusResponse = await (snap.transaction as any).notification(orderId);
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-demo-key';
+    const authHeader = `Basic ${Buffer.from(serverKey + ':').toString('base64')}`;
+    const baseUrl = process.env.MIDTRANS_IS_PRODUCTION === 'true'
+      ? 'https://api.midtrans.com'
+      : 'https://api.sandbox.midtrans.com';
+
+    const res = await fetch(`${baseUrl}/v2/${orderId}/status`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+    });
+
+    const statusResponse = await res.json();
     const transactionStatus = statusResponse?.transaction_status;
     const fraudStatus = statusResponse?.fraud_status;
 
-    console.log(`🔍 Midtrans Live Check for ${orderId}: ${transactionStatus}`);
+    console.log(`🔍 Midtrans Live Check for ${orderId}:`, transactionStatus);
 
     let updatedStatus: OrderStatus = OrderStatus.PENDING;
 
@@ -36,7 +51,7 @@ const syncOrderPaymentWithMidtrans = async (orderId: string): Promise<OrderStatu
 
     return updatedStatus;
   } catch (err) {
-    // Return pending if transaction not found yet or error
+    console.error(`Error syncing order ${orderId} with Midtrans:`, err);
     return OrderStatus.PENDING;
   }
 };

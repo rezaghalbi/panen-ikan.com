@@ -24,7 +24,7 @@ export type CartItem = {
 
 type CartContextType = {
   items: CartItem[];
-  addToCart: (product: any) => void;
+  addToCart: (product: any, qtyToAdd?: number) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
@@ -58,21 +58,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items]);
 
-  // Tambah Produk ke Keranjang
-  const addToCart = (product: any) => {
+  // Tambah Produk ke Keranjang dengan Kuantitas Kustom
+  const addToCart = (product: any, qtyToAdd: number = 1) => {
     setItems((prev) => {
       const productId = String(product.id);
       const existing = prev.find((item) => item.id === productId);
+      const addQty = Math.max(1, Number(qtyToAdd) || 1);
+      const maxStock = Number(product.stock || 999);
 
       if (existing) {
-        if (existing.quantity < product.stock) {
-          return prev.map((item) =>
-            item.id === productId
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          );
-        }
-        return prev;
+        const newTotalQty = Math.min(maxStock, existing.quantity + addQty);
+        return prev.map((item) =>
+          item.id === productId
+            ? { ...item, quantity: newTotalQty }
+            : item
+        );
       }
 
       return [
@@ -82,8 +82,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           name: product.name,
           price: Number(product.price),
           imageUrl: product.imageUrl || '',
-          quantity: 1,
-          stock: Number(product.stock || 99),
+          quantity: Math.min(maxStock, addQty),
+          stock: maxStock,
           unit: product.unit || 'kg',
           weightGram: product.weightGram,
           isFresh: product.isFresh,
