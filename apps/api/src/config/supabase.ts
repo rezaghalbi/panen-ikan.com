@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || ''; // Nanti kita set di Env Vercel
-const supabaseKey = process.env.SUPABASE_KEY || ''; // Nanti kita set di Env Vercel
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Hanya buat Supabase Client jika URL dan Key valid (diawali dengan http)
+export const supabase =
+  supabaseUrl.startsWith('http') && supabaseKey.length > 0
+    ? createClient(supabaseUrl, supabaseKey)
+    : null;
