@@ -14,11 +14,15 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setErrorDetail('');
+
+    console.log('🚀 Sending Register Request to API:', `${API_URL}/api/auth/register`);
 
     try {
       const res = await fetch(`${API_URL}/api/auth/register`, {
@@ -28,15 +32,18 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
+      console.log('📥 Register Response:', data);
 
       if (!res.ok) {
+        if (data.errorDetail) setErrorDetail(String(data.errorDetail));
         throw new Error(data.message || 'Gagal mendaftar');
       }
 
       alert('✅ Registrasi Berhasil! Silakan Login.');
       router.push('/login');
     } catch (err: any) {
-      setError(err.message);
+      console.error('❌ Register Frontend Error:', err);
+      setError(err.message || 'Gagal terhubung ke API backend');
     } finally {
       setIsLoading(false);
     }
@@ -56,8 +63,13 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl mb-4 text-center font-bold border border-red-100">
-            {error}
+          <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl mb-4 text-center font-bold border border-red-100 space-y-1">
+            <p>{error}</p>
+            {errorDetail && (
+              <p className="text-[10px] text-red-400 font-mono font-normal">
+                Detail Error: {errorDetail}
+              </p>
+            )}
           </div>
         )}
 
