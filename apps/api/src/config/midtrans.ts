@@ -1,10 +1,9 @@
 import midtransClient from 'midtrans-client';
 
-const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-demo-key';
-const clientKey = process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-demo-key';
+const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+const clientKey = process.env.MIDTRANS_CLIENT_KEY || '';
 const isProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
 
-// Inisialisasi Midtrans Snap Client
 export const snap = new midtransClient.Snap({
   isProduction: isProduction,
   serverKey: serverKey,
@@ -25,16 +24,8 @@ export const createMidtransTransaction = async (payload: {
     name: string;
   }>;
 }) => {
-  const isDemoKey = serverKey.includes('demo') || !serverKey;
-
-  // Jika menggunakan demo key / belum disetup, gunakan fallback simulation agar app tidak crash saat testing
-  if (isDemoKey) {
-    const demoToken = `DEMO-SNAP-${Date.now()}-${payload.orderId}`;
-    return {
-      token: demoToken,
-      redirect_url: `https://app.sandbox.midtrans.com/snap/v2/vtweb/${demoToken}`,
-      isDemoMode: true,
-    };
+  if (!serverKey || serverKey.includes('demo')) {
+    throw new Error('MIDTRANS_SERVER_KEY is missing or invalid in environment variables');
   }
 
   const parameter = {
@@ -49,22 +40,10 @@ export const createMidtransTransaction = async (payload: {
     item_details: payload.itemDetails,
   };
 
-  try {
-    const transaction = await snap.createTransaction(parameter);
-    return {
-      token: transaction.token,
-      redirect_url: transaction.redirect_url,
-      isDemoMode: false,
-    };
-  } catch (error) {
-    console.error('Midtrans Transaction Error:', error);
-    // Fallback if error occurs (e.g. invalid credentials)
-    const fallbackToken = `SNAP-ERR-${Date.now()}-${payload.orderId}`;
-    return {
-      token: fallbackToken,
-      redirect_url: `#`,
-      isDemoMode: true,
-      error: (error as any).message || 'Midtrans Error',
-    };
-  }
+  const transaction = await snap.createTransaction(parameter);
+  return {
+    token: transaction.token,
+    redirect_url: transaction.redirect_url,
+    isDemoMode: false,
+  };
 };

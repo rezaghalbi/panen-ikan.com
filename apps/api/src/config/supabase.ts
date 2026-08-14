@@ -3,8 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_KEY || '';
 
-// Hanya buat Supabase Client jika URL dan Key valid (diawali dengan http)
+if (!supabaseUrl || !supabaseUrl.startsWith('http')) {
+  console.warn('⚠️ WARNING: SUPABASE_URL is missing or invalid in environment variables.');
+}
+
+if (!supabaseKey) {
+  console.warn('⚠️ WARNING: SUPABASE_KEY is missing in environment variables.');
+}
+
 export const supabase =
-  supabaseUrl.startsWith('http') && supabaseKey.length > 0
+  supabaseUrl.startsWith('http') && supabaseKey
     ? createClient(supabaseUrl, supabaseKey)
-    : null;
+    : (null as any);
