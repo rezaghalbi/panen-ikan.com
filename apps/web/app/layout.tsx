@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { CartProvider } from '../context/CartContext';
+import Navbar from '../components/Navbar';
 import FloatingWhatsApp from '../components/FloatingWhatsApp';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -34,6 +35,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <CartProvider>
+          <Navbar />
           {children}
           <FloatingWhatsApp />
         </CartProvider>

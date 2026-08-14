@@ -27,7 +27,6 @@ export default function MitraPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Navbar />
 
       {/* HERO BANNER COMING SOON */}
       <section className="bg-gradient-to-b from-sky-900 via-sky-800 to-slate-900 text-white py-20 px-4 relative overflow-hidden">

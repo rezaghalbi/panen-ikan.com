@@ -101,7 +101,6 @@ export default function ProductDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-12 h-12 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
@@ -115,7 +114,6 @@ export default function ProductDetailPage() {
   if (error || !product) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <Fish size={64} className="text-slate-300 mb-4" />
           <h2 className="text-xl font-bold text-slate-800 mb-2">Produk Tidak Ditemukan</h2>
@@ -133,7 +131,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Navbar />
 
       <main className="container mx-auto px-4 py-8 max-w-6xl flex-1">
         {/* BREADCRUMB */}

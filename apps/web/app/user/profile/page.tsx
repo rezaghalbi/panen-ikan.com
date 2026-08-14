@@ -52,7 +52,6 @@ export default function UserProfilePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Navbar />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl flex-1">
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 md:p-10">
