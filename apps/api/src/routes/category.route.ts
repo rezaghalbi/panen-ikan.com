@@ -4,18 +4,15 @@ import {
   getCategories,
   getCategoryById,
 } from '../controllers/category.controller';
-import { verifyToken } from '../middlewares/auth.middleware';
+import { verifyToken, adminMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
-
-// Urutan: URL -> Middleware (Opsional) -> Controller
 
 // GET bisa diakses semua orang (tanpa verifyToken)
 router.get('/', getCategories);
 router.get('/:id', getCategoryById);
 
-// POST hanya boleh User yang Login (pakai verifyToken)
-// Nanti di real project, kita tambahkan pengecekan Role ADMIN di sini
-router.post('/', verifyToken, createCategory);
+// POST hanya boleh Admin
+router.post('/', verifyToken, adminMiddleware, createCategory);
 
 export default router;

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAllUsers, updateProfile, getMyProfile } from '../controllers/user.controller';
-import { verifyToken } from '../middlewares/auth.middleware';
+import { verifyToken, adminMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
 
@@ -8,7 +8,7 @@ const router = Router();
 router.get('/profile', verifyToken, getMyProfile);
 
 // Route Admin: Lihat semua user
-router.get('/', verifyToken, getAllUsers);
+router.get('/', verifyToken, adminMiddleware, getAllUsers);
 
 // Route User: Edit Profil sendiri
 router.patch('/profile', verifyToken, updateProfile);

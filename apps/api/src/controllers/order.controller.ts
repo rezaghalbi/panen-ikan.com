@@ -264,6 +264,7 @@ export const getAllOrders = async (req: Request, res: Response) => {
 export const getOrderById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const user = (req as any).user;
 
     let order = await prisma.order.findUnique({
       where: { id },
@@ -279,6 +280,10 @@ export const getOrderById = async (req: Request, res: Response) => {
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (user.role !== 'ADMIN' && order.userId !== user.id) {
+      return res.status(403).json({ message: 'Access Denied' });
     }
 
     if (order.status === OrderStatus.PENDING) {
@@ -297,6 +302,17 @@ export const getOrderById = async (req: Request, res: Response) => {
 export const syncPaymentStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const user = (req as any).user;
+
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (user.role !== 'ADMIN' && order.userId !== user.id) {
+      return res.status(403).json({ message: 'Access Denied' });
+    }
+
     const updatedStatus = await syncOrderPaymentWithMidtrans(id);
     const updatedOrder = await prisma.order.findUnique({
       where: { id },
@@ -339,14 +355,33 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   }
 };
 
+import crypto from 'crypto';
+
 export const handleMidtransNotification = async (req: Request, res: Response) => {
   try {
     const statusResponse = req.body;
     const orderId = statusResponse.order_id || statusResponse.orderId;
+    const statusCode = statusResponse.status_code;
+    const grossAmount = statusResponse.gross_amount;
+    const signatureKey = statusResponse.signature_key;
     const transactionStatus = statusResponse.transaction_status;
     const fraudStatus = statusResponse.fraud_status;
 
     console.log(`🔔 Midtrans Notification Callback for Order ${orderId}: ${transactionStatus}`);
+
+    // Signature Key Verification
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-demo-key';
+    if (signatureKey && serverKey && !serverKey.includes('demo')) {
+      const hash = crypto
+        .createHash('sha512')
+        .update(`${orderId}${statusCode}${grossAmount}${serverKey}`)
+        .digest('hex');
+
+      if (hash !== signatureKey) {
+        console.error(`❌ Invalid Midtrans Signature Key for order ${orderId}!`);
+        return res.status(403).json({ message: 'Invalid signature key' });
+      }
+    }
 
     let newStatus: OrderStatus = OrderStatus.PENDING;
 
