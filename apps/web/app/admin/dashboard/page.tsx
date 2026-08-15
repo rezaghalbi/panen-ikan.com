@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/context/ToastContext';
 import {
   Fish,
   Package,
@@ -23,6 +24,7 @@ import { API_URL } from '@/lib/api';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { toastSuccess, toastError, toastInfo } = useToast();
   const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -30,8 +32,9 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
 
-  // Form State Tambah Produk
+  // Form State Tambah / Edit Produk
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -103,10 +106,46 @@ export default function AdminDashboard() {
     return o.status === orderStatusFilter;
   });
 
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setName('');
+    setDescription('');
+    setPrice('');
+    setWeightGram('1000');
+    setUnit('kg');
+    setStock('50');
+    setImageUrl('');
+    setImageFile(null);
+    setIsFresh(true);
+    setIsFrozen(false);
+    setIsProcessed(false);
+    setEditingProductId(null);
+  };
+
+  const handleEditClick = (p: any) => {
+    setEditingProductId(p.id);
+    setName(p.name || '');
+    setDescription(p.description || '');
+    setPrice(String(p.price || ''));
+    setWeightGram(String(p.weightGram || '1000'));
+    setUnit(p.unit || 'kg');
+    setStock(String(p.stock || '0'));
+    setCategoryId(String(p.categoryId || (categories[0]?.id || '')));
+    setIsFresh(!!p.isFresh);
+    setIsFrozen(!!p.isFrozen);
+    setIsProcessed(!!p.isProcessed);
+    setImageUrl(p.imageUrl || '');
+    setImageFile(null);
+    setShowAddForm(true);
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       let res;
+      const isEdit = !!editingProductId;
+      const endpoint = isEdit ? `${API_URL}/api/products/${editingProductId}` : `${API_URL}/api/products`;
+      const method = isEdit ? 'PUT' : 'POST';
+
       if (imageFile) {
         const formData = new FormData();
         formData.append('name', name);
@@ -121,14 +160,14 @@ export default function AdminDashboard() {
         formData.append('isProcessed', String(isProcessed));
         formData.append('image', imageFile);
 
-        res = await fetch(`${API_URL}/api/products`, {
-          method: 'POST',
+        res = await fetch(endpoint, {
+          method,
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
         });
       } else {
-        res = await fetch(`${API_URL}/api/products`, {
-          method: 'POST',
+        res = await fetch(endpoint, {
+          method,
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
@@ -150,21 +189,17 @@ export default function AdminDashboard() {
       }
 
       if (res.ok) {
-        alert('✅ Produk berhasil ditambahkan!');
+        toastSuccess(isEdit ? '✅ Produk berhasil diperbarui!' : '✅ Produk berhasil ditambahkan!');
         setShowAddForm(false);
-        setName('');
-        setDescription('');
-        setPrice('');
-        setImageUrl('');
-        setImageFile(null);
+        resetForm();
         fetchData();
       } else {
         const json = await res.json();
-        alert(json.message || 'Gagal membuat produk');
+        toastError(json.message || 'Gagal menyimpan produk');
       }
     } catch (e) {
       console.error(e);
-      alert('Error koneksi server');
+      toastError('Error koneksi server');
     }
   };
 
@@ -176,14 +211,15 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        alert('Produk berhasil dihapus');
+        toastSuccess('Produk berhasil dihapus');
         fetchData();
       } else {
         const json = await res.json();
-        alert(json.message);
+        toastError(json.message);
       }
     } catch (e) {
       console.error(e);
+      toastError('Error koneksi server');
     }
   };
 
@@ -198,12 +234,14 @@ export default function AdminDashboard() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
+        toastSuccess(`Status pesanan berhasil diubah menjadi ${newStatus}`);
         fetchData();
       } else {
-        alert('Gagal update status pesanan');
+        toastError('Gagal update status pesanan');
       }
     } catch (e) {
       console.error(e);
+      toastError('Error koneksi server');
     }
   };
 
@@ -295,22 +333,29 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-slate-900">Daftar Produk Ikan</h2>
               <button
-                onClick={() => setShowAddForm(!showAddForm)}
+                onClick={() => {
+                  if (showAddForm && editingProductId) {
+                    resetForm();
+                  } else {
+                    setShowAddForm(!showAddForm);
+                    if (!showAddForm) resetForm();
+                  }
+                }}
                 className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-700 transition shadow-md shadow-emerald-600/20"
               >
                 <PlusCircle size={18} weight="bold" />
-                <span>Tambah Produk Baru</span>
+                <span>{showAddForm ? 'Tutup Form' : 'Tambah Produk Baru'}</span>
               </button>
             </div>
 
-            {/* FORM TAMBAH PRODUK */}
+            {/* FORM TAMBAH / EDIT PRODUK */}
             {showAddForm && (
               <form
-                onSubmit={handleCreateProduct}
+                onSubmit={handleSaveProduct}
                 className="bg-white p-6 rounded-3xl border border-sky-100 shadow-xl mb-8 grid grid-cols-1 md:grid-cols-2 gap-4"
               >
                 <h3 className="col-span-full font-bold text-lg text-slate-900 border-b pb-2">
-                  Form Tambah Produk Ikan Baru
+                  {editingProductId ? '✏️ Form Edit Produk Ikan' : '➕ Form Tambah Produk Ikan Baru'}
                 </h3>
                 <div>
                   <label className="text-xs font-bold text-slate-600 block mb-1">Nama Produk</label>
@@ -443,7 +488,10 @@ export default function AdminDashboard() {
                 <div className="col-span-full flex justify-end gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowAddForm(false)}
+                    onClick={() => {
+                      setShowAddForm(false);
+                      resetForm();
+                    }}
                     className="px-4 py-2 border rounded-xl text-xs font-bold"
                   >
                     Batal
@@ -452,7 +500,7 @@ export default function AdminDashboard() {
                     type="submit"
                     className="bg-sky-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-sky-700 transition shadow-md"
                   >
-                    Simpan Produk
+                    {editingProductId ? 'Update Produk' : 'Simpan Produk'}
                   </button>
                 </div>
               </form>
@@ -493,10 +541,17 @@ export default function AdminDashboard() {
                       <td className="p-4 font-semibold text-slate-600">{p.category?.name}</td>
                       <td className="p-4 font-bold text-slate-900">{formatRupiah(p.price)}</td>
                       <td className="p-4 font-bold text-sky-600">{p.stock}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right space-x-2">
+                        <button
+                          onClick={() => handleEditClick(p)}
+                          className="text-sky-600 hover:text-sky-800 p-1 font-bold inline-flex items-center gap-1"
+                          title="Edit Produk"
+                        >
+                          <Pencil size={18} />
+                        </button>
                         <button
                           onClick={() => handleDeleteProduct(p.id)}
-                          className="text-red-500 hover:text-red-700 p-1 font-bold"
+                          className="text-red-500 hover:text-red-700 p-1 font-bold inline-flex items-center gap-1"
                           title="Hapus Produk"
                         >
                           <Trash size={18} />

@@ -335,6 +335,40 @@ export const syncPaymentStatus = async (req: Request, res: Response) => {
   }
 };
 
+export const cancelMyOrder = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      return res.status(404).json({ message: 'Order tidak ditemukan' });
+    }
+
+    if (order.userId !== user.id && user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Access Denied' });
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      return res.status(400).json({ message: 'Hanya pesanan berstatus PENDING yang dapat dibatalkan' });
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { status: OrderStatus.CANCELLED },
+    });
+
+    await restoreOrderStock(id);
+
+    res.status(200).json({
+      message: 'Pesanan berhasil dibatalkan',
+      data: updatedOrder,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Gagal membatalkan pesanan' });
+  }
+};
+
 export const updateOrderStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

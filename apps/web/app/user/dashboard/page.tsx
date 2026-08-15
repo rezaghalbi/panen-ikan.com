@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/context/ToastContext';
 import {
   Package,
   Clock,
@@ -14,11 +15,13 @@ import {
   Printer,
   X,
   ArrowsCounterClockwise,
+  Prohibit,
 } from '@phosphor-icons/react';
 import { API_URL } from '@/lib/api';
 
 export default function UserDashboard() {
   const router = useRouter();
+  const { toastSuccess, toastError, toastInfo } = useToast();
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -110,24 +113,45 @@ export default function UserDashboard() {
     if (order.snapToken && typeof window !== 'undefined' && (window as any).snap) {
       (window as any).snap.pay(order.snapToken, {
         onSuccess: function () {
-          alert('✅ Pembayaran Berhasil!');
+          toastSuccess('Pembayaran Berhasil! Pesanan Anda segera diproses.');
           fetchMyOrders(true);
         },
         onPending: function () {
-          alert('⏳ Silakan selesaikan pembayaran!');
+          toastInfo('Pesanan dibuat. Silakan selesaikan pembayaran!');
           fetchMyOrders(true);
         },
         onError: function () {
-          alert('❌ Pembayaran Gagal! Silakan coba lagi.');
+          toastError('Pembayaran Gagal! Silakan coba beberapa saat lagi.');
           fetchMyOrders(true);
         },
         onClose: function () {
-          // Refresh daftar pesanan saat popup ditutup
           fetchMyOrders(true);
         },
       });
     } else {
-      alert('Fitur pembayaran Midtrans Snap aktif.');
+      toastInfo('Fitur pembayaran Midtrans Snap aktif.');
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Yakin ingin membatalkan pesanan ini? Stok akan dikembalikan.')) return;
+    const token = Cookies.get('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (res.ok) {
+        toastSuccess('Pesanan berhasil dibatalkan dan stok dikembalikan.');
+        fetchMyOrders(true);
+      } else {
+        toastError(json.message || 'Gagal membatalkan pesanan.');
+      }
+    } catch (e) {
+      toastError('Terjadi kesalahan koneksi server.');
     }
   };
 
@@ -237,7 +261,7 @@ export default function UserDashboard() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={() => handlePrintReceipt(order)}
                       className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition border border-slate-200"
@@ -247,13 +271,23 @@ export default function UserDashboard() {
                     </button>
 
                     {order.status === 'PENDING' && (
-                      <button
-                        onClick={() => handlePaySnap(order)}
-                        className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 hover:from-orange-600 hover:to-amber-600 transition"
-                      >
-                        <CreditCard size={16} weight="bold" />
-                        <span>Bayar Sekarang</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleCancelOrder(order.id)}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 transition border border-red-200"
+                        >
+                          <Prohibit size={16} />
+                          <span>Batalkan</span>
+                        </button>
+
+                        <button
+                          onClick={() => handlePaySnap(order)}
+                          className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-orange-500/20 flex items-center gap-1.5 hover:from-orange-600 hover:to-amber-600 transition"
+                        >
+                          <CreditCard size={16} weight="bold" />
+                          <span>Bayar Sekarang</span>
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

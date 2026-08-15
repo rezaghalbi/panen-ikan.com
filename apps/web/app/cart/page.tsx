@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 import { API_URL } from '@/lib/api';
 import {
   Trash,
@@ -19,6 +20,7 @@ import {
 export default function CartPage() {
   const router = useRouter();
   const { items, removeFromCart, updateQuantity, clearCart, cartTotal } = useCart();
+  const { toastSuccess, toastError, toastWarning, toastInfo } = useToast();
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [shippingMethod, setShippingMethod] = useState('Instant Cold-Chain');
@@ -46,12 +48,12 @@ export default function CartPage() {
   const handleCheckout = async () => {
     const token = Cookies.get('token');
     if (!token) {
-      alert('Silakan login terlebih dahulu untuk checkout!');
+      toastWarning('Silakan login terlebih dahulu untuk checkout!');
       return router.push('/login');
     }
-    if (items.length === 0) return alert('Keranjang belanja Anda kosong!');
+    if (items.length === 0) return toastWarning('Keranjang belanja Anda kosong!');
     if (!shippingAddress.trim()) {
-      return alert('Harap isi alamat lengkap pengiriman!');
+      return toastWarning('Harap isi alamat lengkap pengiriman!');
     }
 
     setIsSubmitting(true);
@@ -78,36 +80,36 @@ export default function CartPage() {
         if (json.snapToken && typeof window !== 'undefined' && (window as any).snap) {
           (window as any).snap.pay(json.snapToken, {
             onSuccess: function (result: any) {
-              clearCart(); // ✅ Bersihkan keranjang hanya setelah pembayaran sukses
-              alert('✅ Pembayaran Berhasil!');
+              clearCart();
+              toastSuccess('Pembayaran Berhasil! Pesanan Anda sedang diproses.');
               router.push('/user');
             },
             onPending: function (result: any) {
-              clearCart(); // ✅ Bersihkan juga jika pending (order tetap dibuat)
-              alert('⏳ Pesanan dibuat! Menunggu pembayaran.');
+              clearCart();
+              toastInfo('Pesanan dibuat! Silakan selesaikan pembayaran.');
               router.push('/user');
             },
             onError: function (result: any) {
-              alert('❌ Pembayaran gagal! Coba lagi dari halaman pesanan saya.');
+              toastError('Pembayaran gagal! Coba lagi dari halaman pesanan saya.');
               router.push('/user');
             },
             onClose: function () {
-              clearCart(); // ✅ Order sudah dibuat di DB, bersihkan keranjang untuk cegah order duplikat
-              alert('ℹ️ Pesanan sudah dibuat. Selesaikan pembayaran dari halaman Pesanan Saya.');
+              clearCart();
+              toastInfo('Pesanan sudah dibuat. Selesaikan pembayaran dari halaman Pesanan Saya.');
               router.push('/user');
             },
           });
         } else {
           clearCart();
-          alert('✅ Pesanan Berhasil Dibuat!');
+          toastSuccess('Pesanan Berhasil Dibuat!');
           router.push('/user');
         }
       } else {
-        alert(json.message || 'Gagal membuat pesanan');
+        toastError(json.message || 'Gagal membuat pesanan');
       }
     } catch (e) {
       console.error(e);
-      alert('Terjadi kesalahan koneksi server');
+      toastError('Terjadi kesalahan koneksi server');
     } finally {
       setIsSubmitting(false);
     }

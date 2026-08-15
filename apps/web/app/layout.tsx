@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { CartProvider } from '../context/CartContext';
+import { ToastProvider } from '../context/ToastContext';
 import Navbar from '../components/Navbar';
 import FloatingWhatsApp from '../components/FloatingWhatsApp';
 
@@ -41,11 +42,13 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} antialiased bg-slate-50 text-slate-900 selection:bg-sky-500 selection:text-white`}>
-        <CartProvider>
-          <Navbar />
-          {children}
-          <FloatingWhatsApp />
-        </CartProvider>
+        <ToastProvider>
+          <CartProvider>
+            <Navbar />
+            {children}
+            <FloatingWhatsApp />
+          </CartProvider>
+        </ToastProvider>
       </body>
     </html>
   );

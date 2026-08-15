@@ -7,6 +7,7 @@ import {
   updateOrderStatus,
   handleMidtransNotification,
   syncPaymentStatus,
+  cancelMyOrder,
 } from '../controllers/order.controller';
 import { authMiddleware, adminMiddleware } from '../middlewares/auth.middleware';
 
@@ -20,6 +21,7 @@ router.post('/', authMiddleware, createOrder);
 router.get('/my-orders', authMiddleware, getMyOrders);
 router.get('/:id', authMiddleware, getOrderById);
 router.post('/:id/sync-payment', authMiddleware, syncPaymentStatus);
+router.post('/:id/cancel', authMiddleware, cancelMyOrder);
 
 // Admin protected routes
 router.get('/', authMiddleware, adminMiddleware, getAllOrders);
