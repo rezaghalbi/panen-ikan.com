@@ -133,53 +133,58 @@ export default function CartPage() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 items-center"
+                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-wrap sm:flex-nowrap gap-4 items-center justify-between"
               >
-                <div className="w-20 h-20 bg-slate-100 rounded-xl overflow-hidden relative shrink-0">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300">
-                      <ShoppingCart size={24} />
-                    </div>
-                  )}
+                <div className="flex items-center gap-3 flex-1 min-w-[200px]">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-xl overflow-hidden relative shrink-0 border border-slate-200">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <ShoppingCart size={24} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{item.name}</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatRupiah(item.price)} / {item.unit || 'kg'}
+                    </p>
+                    <p className="text-xs font-bold text-sky-600 mt-1">
+                      Subtotal: {formatRupiah(item.price * item.quantity)}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex-1">
-                  <h3 className="font-bold text-slate-900 text-sm md:text-base line-clamp-1">{item.name}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {formatRupiah(item.price)} / {item.unit || 'kg'}
-                  </p>
-                  <p className="text-xs font-bold text-sky-600 mt-1">
-                    Subtotal: {formatRupiah(item.price * item.quantity)}
-                  </p>
-                </div>
+                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                  {/* Control Qty */}
+                  <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                    <button
+                      onClick={() => updateQuantity(item.id, -1)}
+                      className="p-1 hover:text-sky-600 text-slate-600"
+                    >
+                      <Minus weight="bold" size={14} />
+                    </button>
+                    <span className="font-bold text-xs w-6 text-center text-slate-800">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(item.id, 1)}
+                      className="p-1 hover:text-sky-600 text-slate-600"
+                    >
+                      <Plus weight="bold" size={14} />
+                    </button>
+                  </div>
 
-                {/* Control Qty */}
-                <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
                   <button
-                    onClick={() => updateQuantity(item.id, -1)}
-                    className="p-1 hover:text-sky-600 text-slate-600"
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-slate-300 hover:text-red-500 transition p-2"
+                    title="Hapus"
                   >
-                    <Minus weight="bold" size={14} />
-                  </button>
-                  <span className="font-bold text-xs w-6 text-center text-slate-800">
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => updateQuantity(item.id, 1)}
-                    className="p-1 hover:text-sky-600 text-slate-600"
-                  >
-                    <Plus weight="bold" size={14} />
+                    <Trash size={20} weight="bold" />
                   </button>
                 </div>
-
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  className="text-slate-300 hover:text-red-500 transition p-2"
-                >
-                  <Trash size={20} weight="bold" />
-                </button>
               </div>
             ))}
           </div>

@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import { CartProvider } from '../context/CartContext';
@@ -11,6 +11,13 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'PanenQu - Marketplace Ikan Segar & Seafood Quality',
   description: 'Platform jual beli ikan segar budidaya, fillet frozen IQF, dan olahan bumbu kualitas terbaik langsung dari petambak mitra.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -33,7 +40,7 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} antialiased bg-slate-50 text-slate-900 selection:bg-sky-500 selection:text-white`}>
         <CartProvider>
           <Navbar />
           {children}

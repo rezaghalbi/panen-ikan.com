@@ -356,7 +356,7 @@ export default function AdminDashboard() {
             )}
 
             {/* TABEL PRODUK */}
-            <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-3xl border border-slate-100 overflow-x-auto shadow-sm">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider">
                   <tr>
