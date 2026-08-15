@@ -73,11 +73,10 @@ export default function UserProfilePage() {
       phone,
       address,
     };
-    Cookies.set('user', JSON.stringify(updatedUser), { expires: 7, path: '/' });
 
     if (token) {
       try {
-        await fetch(`${API_URL}/api/users/profile`, {
+        const res = await fetch(`${API_URL}/api/users/profile`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -85,13 +84,26 @@ export default function UserProfilePage() {
           },
           body: JSON.stringify({ name, phone, address }),
         });
+
+        if (res.ok) {
+          // Perbarui cookie hanya jika API berhasil
+          Cookies.set('user', JSON.stringify(updatedUser), { expires: 7, path: '/' });
+          setSavedSuccess(true);
+          setTimeout(() => setSavedSuccess(false), 3000);
+        } else {
+          const json = await res.json();
+          alert(`Gagal menyimpan profil: ${json.message || 'Coba lagi nanti.'}`);
+        }
       } catch (err) {
         console.error('Failed to sync profile to server', err);
+        alert('Terjadi kesalahan koneksi. Profil tidak tersimpan.');
       }
+    } else {
+      // Tidak ada token, update hanya di cookie lokal
+      Cookies.set('user', JSON.stringify(updatedUser), { expires: 7, path: '/' });
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
     }
-
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
   };
 
   return (

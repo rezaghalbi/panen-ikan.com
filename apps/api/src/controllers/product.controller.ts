@@ -174,6 +174,11 @@ export const updateProduct = async (req: Request, res: Response) => {
       }
     }
 
+    const existingProduct = await prisma.product.findUnique({ where: { id } });
+    if (!existingProduct) {
+      return res.status(404).json({ message: 'Produk tidak ditemukan' });
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {

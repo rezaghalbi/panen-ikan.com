@@ -11,23 +11,39 @@ import { handleMidtransNotification } from './controllers/order.controller';
 const app: Express = express();
 
 // Parse FRONTEND_URL dynamically from environment variables
-const allowedOrigins = process.env.FRONTEND_URL
+const allowedOriginsFromEnv = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
-  : ['http://localhost:3000', 'http://localhost:3001', 'https://panenqu.vercel.app'];
+  : [];
+
+// Daftar origin yang diizinkan (produksi + lokal)
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://panenqu.vercel.app',
+  'https://panen-ikan-com-nmap.vercel.app', // URL frontend produksi aktual
+  ...allowedOriginsFromEnv,
+];
 
 // Middleware CORS
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl) or if origin is in allowedOrigins
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Allow jika origin ada di whitelist statis
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      // Allow semua preview deployment Vercel untuk project ini
+      // Format: panen-ikan-com-<hash>-rezaghalbis-projects.vercel.app
+      if (/^https:\/\/panen-ikan-com-[a-z0-9-]+-rezaghalbis-projects\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
       }
+
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
     credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );

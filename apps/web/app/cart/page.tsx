@@ -92,6 +92,7 @@ export default function CartPage() {
               router.push('/user');
             },
             onClose: function () {
+              clearCart(); // ✅ Order sudah dibuat di DB, bersihkan keranjang untuk cegah order duplikat
               alert('ℹ️ Pesanan sudah dibuat. Selesaikan pembayaran dari halaman Pesanan Saya.');
               router.push('/user');
             },

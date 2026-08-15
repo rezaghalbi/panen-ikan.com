@@ -118,7 +118,12 @@ export default function UserDashboard() {
           fetchMyOrders(true);
         },
         onError: function () {
-          alert('❌ Pembayaran Gagal!');
+          alert('❌ Pembayaran Gagal! Silakan coba lagi.');
+          fetchMyOrders(true);
+        },
+        onClose: function () {
+          // Refresh daftar pesanan saat popup ditutup
+          fetchMyOrders(true);
         },
       });
     } else {

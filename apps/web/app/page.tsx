@@ -332,13 +332,19 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="bg-gradient-to-r from-sky-600 to-cyan-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:from-sky-700 hover:to-cyan-700 transition shadow-md shadow-sky-600/20 active:scale-95"
-                    >
-                      <Plus size={16} weight="bold" />
-                      <span>Tambah</span>
-                    </button>
+                    {product.stock <= 0 ? (
+                      <span className="bg-red-100 text-red-600 text-xs font-black px-3 py-2 rounded-xl border border-red-200">
+                        Stok Habis
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => addToCart(product)}
+                        className="bg-gradient-to-r from-sky-600 to-cyan-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:from-sky-700 hover:to-cyan-700 transition shadow-md shadow-sky-600/20 active:scale-95"
+                      >
+                        <Plus size={16} weight="bold" />
+                        <span>Tambah</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
