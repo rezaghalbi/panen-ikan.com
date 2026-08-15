@@ -202,13 +202,19 @@ export default function CatalogPage() {
                       >
                         <Eye size={18} />
                       </Link>
-                      <button
-                        onClick={() => addToCart(product)}
-                        className="bg-sky-600 text-white p-2.5 rounded-xl hover:bg-sky-700 transition shadow-md shadow-sky-600/20 active:scale-95"
-                        title="Tambah ke Keranjang"
-                      >
-                        <Plus size={18} weight="bold" />
-                      </button>
+                      {product.stock <= 0 ? (
+                        <span className="bg-red-100 text-red-600 text-[11px] font-bold px-2.5 py-2.5 rounded-xl border border-red-200">
+                          Habis
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="bg-sky-600 text-white p-2.5 rounded-xl hover:bg-sky-700 transition shadow-md shadow-sky-600/20 active:scale-95"
+                          title="Tambah ke Keranjang"
+                        >
+                          <Plus size={18} weight="bold" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Fish } from '@phosphor-icons/react';
+import { useToast } from '@/context/ToastContext';
 import { API_URL } from '@/lib/api';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { toastSuccess, toastError } = useToast();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,11 +41,12 @@ export default function RegisterPage() {
         throw new Error(data.message || 'Gagal mendaftar');
       }
 
-      alert('✅ Registrasi Berhasil! Silakan Login.');
+      toastSuccess('Registrasi Berhasil! Silakan Login.');
       router.push('/login');
     } catch (err: any) {
       console.error('❌ Register Frontend Error:', err);
       setError(err.message || 'Gagal terhubung ke API backend');
+      toastError(err.message || 'Gagal mendaftar');
     } finally {
       setIsLoading(false);
     }
