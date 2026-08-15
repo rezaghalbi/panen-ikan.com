@@ -13,6 +13,7 @@ import {
   CheckCircle,
   Key,
 } from '@phosphor-icons/react';
+import { API_URL } from '@/lib/api';
 
 export default function UserProfilePage() {
   const router = useRouter();
