@@ -110,6 +110,11 @@ export const createOrder = async (req: Request, res: Response) => {
           throw new Error(`Product with ID ${item.productId} not found`);
         }
 
+        // Validasi kuantitas harus positif
+        if (!item.quantity || item.quantity < 1 || !Number.isInteger(item.quantity)) {
+          throw new Error(`Kuantitas untuk produk ${product.name} tidak valid (harus bilangan bulat positif)`);
+        }
+
         if (product.stock < item.quantity) {
           throw new Error(
             `Stok untuk ${product.name} tidak mencukupi (Tersedia: ${product.stock}, Diminta: ${item.quantity})`
@@ -334,6 +339,14 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+
+    // Validasi status harus enum yang valid
+    const validStatuses = ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        message: `Status '${status}' tidak valid. Gunakan: ${validStatuses.join(', ')}`,
+      });
+    }
 
     const existingOrder = await prisma.order.findUnique({ where: { id } });
 

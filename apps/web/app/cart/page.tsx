@@ -74,28 +74,30 @@ export default function CartPage() {
       const json = await res.json();
 
       if (res.ok) {
-        clearCart();
-
         // Jika ada Midtrans Snap Token & Window Snap tersedia
         if (json.snapToken && typeof window !== 'undefined' && (window as any).snap) {
           (window as any).snap.pay(json.snapToken, {
             onSuccess: function (result: any) {
+              clearCart(); // ✅ Bersihkan keranjang hanya setelah pembayaran sukses
               alert('✅ Pembayaran Berhasil!');
               router.push('/user');
             },
             onPending: function (result: any) {
+              clearCart(); // ✅ Bersihkan juga jika pending (order tetap dibuat)
               alert('⏳ Pesanan dibuat! Menunggu pembayaran.');
               router.push('/user');
             },
             onError: function (result: any) {
-              alert('❌ Pembayaran gagal!');
+              alert('❌ Pembayaran gagal! Coba lagi dari halaman pesanan saya.');
               router.push('/user');
             },
             onClose: function () {
+              alert('ℹ️ Pesanan sudah dibuat. Selesaikan pembayaran dari halaman Pesanan Saya.');
               router.push('/user');
             },
           });
         } else {
+          clearCart();
           alert('✅ Pesanan Berhasil Dibuat!');
           router.push('/user');
         }

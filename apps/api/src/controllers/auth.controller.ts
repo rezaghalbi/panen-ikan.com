@@ -16,6 +16,13 @@ export const register = async (req: Request, res: Response) => {
         .json({ message: 'Nama, email, dan password wajib diisi!' });
     }
 
+    // Validasi panjang password minimal 6 karakter
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: 'Password minimal harus 6 karakter!' });
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });

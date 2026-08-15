@@ -78,6 +78,7 @@ export const getAllProducts = async (req: Request, res: Response) => {
     if (search) {
       whereClause.name = {
         contains: String(search),
+        mode: 'insensitive', // FIX: pencarian tidak lagi case-sensitive
       };
     }
 

@@ -23,7 +23,7 @@ export const verifyToken = (
   }
 
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET as string || 'panenqu-secret-key-2026');
+    const verified = jwt.verify(token, process.env.JWT_SECRET as string || 'panenqu-secret-jwt-key-2026');
     req.user = verified;
     next();
   } catch (error) {

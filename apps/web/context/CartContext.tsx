@@ -24,7 +24,7 @@ export type CartItem = {
 
 type CartContextType = {
   items: CartItem[];
-  addToCart: (product: any, qtyToAdd?: number) => void;
+  addToCart: (product: any, qtyToAdd?: number, replaceIfExists?: boolean) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
@@ -59,15 +59,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   // Tambah Produk ke Keranjang dengan Kuantitas Kustom
-  const addToCart = (product: any, qtyToAdd: number = 1) => {
+  // replaceIfExists: jika true, ganti quantity (untuk Beli Sekarang); jika false, tambahkan
+  const addToCart = (product: any, qtyToAdd: number = 1, replaceIfExists: boolean = false) => {
     setItems((prev) => {
       const productId = String(product.id);
       const existing = prev.find((item) => item.id === productId);
-      const addQty = Math.max(1, Number(qtyToAdd) || 1);
-      const maxStock = Number(product.stock || 999);
+      // FIX: gunakan ?? bukan ||, supaya stok 0 tidak jadi 999
+      const maxStock = Number(product.stock ?? 0);
+      const addQty = Math.min(Math.max(1, Number(qtyToAdd) || 1), maxStock);
+
+      // Jika stok 0, jangan tambahkan ke keranjang
+      if (maxStock <= 0) return prev;
 
       if (existing) {
-        const newTotalQty = Math.min(maxStock, existing.quantity + addQty);
+        const newTotalQty = replaceIfExists
+          ? addQty // Ganti quantity (untuk Beli Sekarang)
+          : Math.min(maxStock, existing.quantity + addQty); // Tambahkan
         return prev.map((item) =>
           item.id === productId
             ? { ...item, quantity: newTotalQty }
@@ -82,7 +89,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           name: product.name,
           price: Number(product.price),
           imageUrl: product.imageUrl || '',
-          quantity: Math.min(maxStock, addQty),
+          quantity: addQty,
           stock: maxStock,
           unit: product.unit || 'kg',
           weightGram: product.weightGram,

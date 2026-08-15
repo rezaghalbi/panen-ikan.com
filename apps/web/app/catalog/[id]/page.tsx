@@ -80,6 +80,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (product.stock <= 0) return;
     addToCart(product, quantity);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2500);
@@ -87,7 +88,9 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (!product) return;
-    addToCart(product, quantity);
+    if (product.stock <= 0) return;
+    // replaceIfExists=true: jika produk sudah ada di keranjang, SET ke qty yang dipilih (bukan tambah)
+    addToCart(product, quantity, true);
     router.push('/cart');
   };
 
@@ -218,27 +221,32 @@ export default function ProductDetailPage() {
 
             {/* QUANTITY & BUTTONS */}
             <div className="space-y-4 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Jumlah Pembelian:</span>
-                <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200 transition shadow-sm"
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span className="font-extrabold text-sm text-slate-900 w-8 text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200 transition shadow-sm"
-                  >
-                    <Plus size={16} />
-                  </button>
+              {product.stock <= 0 ? (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-4 rounded-xl font-bold text-center">
+                  ❌ Stok Habis — Produk Sedang Tidak Tersedia
                 </div>
-              </div>
-
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">Jumlah Pembelian:</span>
+                  <div className="flex items-center gap-3 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200 transition shadow-sm"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="font-extrabold text-sm text-slate-900 w-8 text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                      className="w-8 h-8 bg-white rounded-lg flex items-center justify-center font-bold text-slate-700 hover:bg-slate-200 transition shadow-sm"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
               {isAdded && (
                 <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs p-3 rounded-xl font-bold flex items-center gap-2">
                   <CheckCircle size={18} />
@@ -249,7 +257,8 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={handleAddToCart}
-                  className="w-full bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold py-3.5 rounded-2xl transition border border-sky-200 flex items-center justify-center gap-2 text-sm"
+                  disabled={product.stock <= 0}
+                  className="w-full bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold py-3.5 rounded-2xl transition border border-sky-200 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart size={20} />
                   <span>+ Keranjang</span>
@@ -257,7 +266,8 @@ export default function ProductDetailPage() {
 
                 <button
                   onClick={handleBuyNow}
-                  className="w-full bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white font-bold py-3.5 rounded-2xl transition shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2 text-sm"
+                  disabled={product.stock <= 0}
+                  className="w-full bg-gradient-to-r from-sky-600 to-cyan-600 hover:from-sky-700 hover:to-cyan-700 text-white font-bold py-3.5 rounded-2xl transition shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Lightning size={20} weight="fill" />
                   <span>Beli Sekarang</span>
