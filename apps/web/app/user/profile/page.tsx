@@ -23,6 +23,7 @@ export default function UserProfilePage() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
