@@ -17,7 +17,7 @@ router.get('/:id', getProductById);
 
 // Admin protected routes
 router.post('/', authMiddleware, adminMiddleware, upload.single('image'), createProduct);
-router.put('/:id', authMiddleware, adminMiddleware, updateProduct);
+router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), updateProduct);
 router.delete('/:id', authMiddleware, adminMiddleware, deleteProduct);
 
 export default router;

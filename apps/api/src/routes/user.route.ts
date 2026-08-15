@@ -1,8 +1,11 @@
 import { Router } from 'express';
-import { getAllUsers, updateProfile } from '../controllers/user.controller';
+import { getAllUsers, updateProfile, getMyProfile } from '../controllers/user.controller';
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
+
+// Route User: Profil sendiri
+router.get('/profile', verifyToken, getMyProfile);
 
 // Route Admin: Lihat semua user
 router.get('/', verifyToken, getAllUsers);

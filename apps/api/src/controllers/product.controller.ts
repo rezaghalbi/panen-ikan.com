@@ -151,12 +151,26 @@ export const updateProduct = async (req: Request, res: Response) => {
       imageUrl,
     } = req.body;
 
-    const existingProduct = await prisma.product.findUnique({
-      where: { id },
-    });
+    let finalImageUrl = imageUrl;
+    if (req.file) {
+      const file = req.file;
+      const bucketName = process.env.SUPABASE_BUCKET || 'products';
+      const fileName = `panenqu-${Date.now()}-${file.originalname.replace(/\s/g, '-')}`;
 
-    if (!existingProduct) {
-      return res.status(404).json({ message: 'Product not found' });
+      if (supabase && process.env.SUPABASE_URL) {
+        const { data, error } = await supabase.storage
+          .from(bucketName)
+          .upload(fileName, file.buffer, {
+            contentType: file.mimetype,
+          });
+
+        if (!error) {
+          const { data: publicData } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(fileName);
+          finalImageUrl = publicData.publicUrl;
+        }
+      }
     }
 
     const updatedProduct = await prisma.product.update({
@@ -172,7 +186,7 @@ export const updateProduct = async (req: Request, res: Response) => {
         isFresh: isFresh !== undefined ? isFresh === 'true' || isFresh === true : undefined,
         isFrozen: isFrozen !== undefined ? isFrozen === 'true' || isFrozen === true : undefined,
         isProcessed: isProcessed !== undefined ? isProcessed === 'true' || isProcessed === true : undefined,
-        imageUrl: imageUrl !== undefined ? imageUrl : undefined,
+        imageUrl: finalImageUrl !== undefined ? finalImageUrl : undefined,
       },
     });
 

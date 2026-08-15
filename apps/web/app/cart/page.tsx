@@ -25,6 +25,16 @@ export default function CartPage() {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    const userCookie = Cookies.get('user');
+    if (userCookie) {
+      try {
+        const u = JSON.parse(userCookie);
+        if (u.address) setShippingAddress(u.address);
+      } catch (e) {}
+    }
+  }, []);
+
   const formatRupiah = (number: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',

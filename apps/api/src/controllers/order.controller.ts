@@ -4,6 +4,31 @@ import { createMidtransTransaction, snap } from '../config/midtrans';
 
 const prisma = new PrismaClient();
 
+// Helper untuk mengembalikan stok saat pesanan dibatalkan
+const restoreOrderStock = async (orderId: string) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
+    if (!order) return;
+
+    for (const item of order.items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: {
+          stock: {
+            increment: item.quantity,
+          },
+        },
+      });
+    }
+    console.log(`📦 Stock restored for cancelled order ${orderId}`);
+  } catch (err) {
+    console.error(`Error restoring stock for order ${orderId}:`, err);
+  }
+};
+
 // Helper untuk menyinkronkan status pesanan dengan Midtrans API
 const syncOrderPaymentWithMidtrans = async (orderId: string): Promise<OrderStatus> => {
   try {
@@ -43,10 +68,15 @@ const syncOrderPaymentWithMidtrans = async (orderId: string): Promise<OrderStatu
     }
 
     if (updatedStatus !== OrderStatus.PENDING) {
+      const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
       await prisma.order.update({
         where: { id: orderId },
         data: { status: updatedStatus },
       });
+
+      if (updatedStatus === OrderStatus.CANCELLED && existingOrder?.status !== OrderStatus.CANCELLED) {
+        await restoreOrderStock(orderId);
+      }
     }
 
     return updatedStatus;
@@ -66,76 +96,78 @@ export const createOrder = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Cart items cannot be empty' });
     }
 
-    let calculatedTotal = 0;
-    const orderItemData = [];
-    const midtransItemDetails = [];
+    // Atomic transaction for checking stock, deducting stock, and creating order
+    const newOrder = await prisma.$transaction(async (tx) => {
+      let calculatedTotal = 0;
+      const orderItemData = [];
 
-    // Validasi Stok & Hitung Subtotal
-    for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-      });
+      for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
 
-      if (!product) {
-        return res.status(400).json({ message: `Product with ID ${item.productId} not found` });
-      }
+        if (!product) {
+          throw new Error(`Product with ID ${item.productId} not found`);
+        }
 
-      if (product.stock < item.quantity) {
-        return res.status(400).json({
-          message: `Stok untuk ${product.name} tidak mencukupi (Tersedia: ${product.stock}, Diminta: ${item.quantity})`,
+        if (product.stock < item.quantity) {
+          throw new Error(
+            `Stok untuk ${product.name} tidak mencukupi (Tersedia: ${product.stock}, Diminta: ${item.quantity})`
+          );
+        }
+
+        const subTotal = product.price * item.quantity;
+        calculatedTotal += subTotal;
+
+        orderItemData.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: product.price,
+        });
+
+        // Kurangi stok produk secara atomik
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: product.stock - item.quantity,
+          },
         });
       }
 
-      const subTotal = product.price * item.quantity;
-      calculatedTotal += subTotal;
-
-      orderItemData.push({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: product.price,
-      });
-
-      midtransItemDetails.push({
-        id: product.id,
-        price: product.price,
-        quantity: item.quantity,
-        name: product.name.substring(0, 50),
-      });
-
-      // Kurangi stok produk
-      await prisma.product.update({
-        where: { id: item.productId },
+      const createdOrder = await tx.order.create({
         data: {
-          stock: product.stock - item.quantity,
+          userId,
+          totalPrice: calculatedTotal,
+          shippingAddress: shippingAddress || 'Alamat Utama',
+          shippingMethod: shippingMethod || 'Instant Cold-Chain',
+          notes: notes || '',
+          status: OrderStatus.PENDING,
+          items: {
+            create: orderItemData,
+          },
+        },
+        include: {
+          items: {
+            include: { product: true },
+          },
+          user: true,
         },
       });
-    }
 
-    // 1. Simpan Order ke Database
-    const newOrder = await prisma.order.create({
-      data: {
-        userId,
-        totalPrice: calculatedTotal,
-        shippingAddress: shippingAddress || 'Alamat Utama',
-        shippingMethod: shippingMethod || 'Instant Cold-Chain',
-        notes: notes || '',
-        status: OrderStatus.PENDING,
-        items: {
-          create: orderItemData,
-        },
-      },
-      include: {
-        items: {
-          include: { product: true },
-        },
-        user: true,
-      },
+      return createdOrder;
     });
 
-    // 2. Generate Token Midtrans Snap
+    const midtransItemDetails = newOrder.items.map((item) => ({
+      id: item.product.id,
+      price: item.price,
+      quantity: item.quantity,
+      name: item.product.name.substring(0, 50),
+    }));
+
+    // Generate Token Midtrans Snap
     const midtransResult = await createMidtransTransaction({
       orderId: newOrder.id,
-      grossAmount: calculatedTotal,
+      grossAmount: newOrder.totalPrice,
       customerDetails: {
         first_name: newOrder.user?.name || 'Pelanggan PanenQu',
         email: newOrder.user?.email || 'user@panenqu.com',
@@ -143,7 +175,7 @@ export const createOrder = async (req: Request, res: Response) => {
       itemDetails: midtransItemDetails,
     });
 
-    // 3. Update Order dengan Snap Token
+    // Update Order dengan Snap Token
     const updatedOrder = await prisma.order.update({
       where: { id: newOrder.id },
       data: {
@@ -287,10 +319,16 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    const existingOrder = await prisma.order.findUnique({ where: { id } });
+
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: { status: status as OrderStatus },
     });
+
+    if (status === 'CANCELLED' && existingOrder?.status !== 'CANCELLED') {
+      await restoreOrderStock(id);
+    }
 
     res.status(200).json({
       message: `Order status updated to ${status}`,
@@ -325,10 +363,15 @@ export const handleMidtransNotification = async (req: Request, res: Response) =>
     }
 
     if (orderId && newStatus !== OrderStatus.PENDING) {
+      const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
       await prisma.order.update({
         where: { id: orderId },
         data: { status: newStatus },
       });
+
+      if (newStatus === OrderStatus.CANCELLED && existingOrder?.status !== OrderStatus.CANCELLED) {
+        await restoreOrderStock(orderId);
+      }
     }
 
     res.status(200).json({ message: 'Notification processed', status: newStatus });

@@ -21,23 +21,49 @@ export default function UserProfilePage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const userCookie = Cookies.get('user');
-    if (userCookie) {
-      try {
-        const user = JSON.parse(userCookie);
-        setName(user.name || '');
-        setEmail(user.email || '');
-        setPhone(user.phone || '081234567890');
-        setAddress(user.address || 'Jl. Ikan Mas No. 12, Jakarta');
-      } catch (e) {}
-    }
+    const fetchProfile = async () => {
+      const token = Cookies.get('token');
+      const userCookie = Cookies.get('user');
+      if (userCookie) {
+        try {
+          const u = JSON.parse(userCookie);
+          setName(u.name || '');
+          setEmail(u.email || '');
+          setPhone(u.phone || '');
+          setAddress(u.address || '');
+        } catch (e) {}
+      }
+
+      if (token) {
+        try {
+          const res = await fetch(`${API_URL}/api/users/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const json = await res.json();
+          if (res.ok && json.data) {
+            setName(json.data.name || '');
+            setEmail(json.data.email || '');
+            setPhone(json.data.phone || '');
+            setAddress(json.data.address || '');
+          }
+        } catch (err) {
+          console.error('Error loading profile', err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
   }, []);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = Cookies.get('token');
     const existingUser = Cookies.get('user') ? JSON.parse(Cookies.get('user')!) : {};
     const updatedUser = {
       ...existingUser,
@@ -46,6 +72,22 @@ export default function UserProfilePage() {
       address,
     };
     Cookies.set('user', JSON.stringify(updatedUser), { expires: 7, path: '/' });
+
+    if (token) {
+      try {
+        await fetch(`${API_URL}/api/users/profile`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name, phone, address }),
+        });
+      } catch (err) {
+        console.error('Failed to sync profile to server', err);
+      }
+    }
+
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
