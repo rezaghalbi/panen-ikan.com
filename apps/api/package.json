@@ -6,7 +6,7 @@
     "dev": "nodemon src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "postinstall": "prisma db push --accept-data-loss && prisma generate"
+    "postinstall": "prisma db push --accept-data-loss && prisma generate && npx ts-node src/seed-admin.ts"
   },
   "keywords": [],
   "author": "",

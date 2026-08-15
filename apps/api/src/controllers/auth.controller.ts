@@ -64,11 +64,23 @@ export const register = async (req: Request, res: Response) => {
 // Fitur Login User
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email },
     });
+
+    // Auto-bootstrap default Admin account jika belum ada di database
+    if (!user && email && email.toLowerCase() === 'admin@panenqu.com') {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password || 'password123', salt);
+      user = await prisma.user.create({
+        data: {
+          name: 'Admin PanenQu',
+          email: 'admin@panenqu.com',
+          password: hashedPassword,
+          role: 'ADMIN',
+        },
+      });
+    }
 
     if (!user) {
       return res.status(400).json({ message: 'Email atau password salah!' });
